@@ -19,8 +19,9 @@ user, directory, nginx site, or systemd unit with the other projects on the box.
 | CDP port | `19211` (loopback only) |
 | Browser | `/usr/bin/google-chrome` |
 | Resource guard | `MemoryMax=4G`, `CPUQuota=200%` |
-| Version | **v1.6.12** (2026-11-19) — upstream `czg86389-hub/muse2api` |
+| Version | **v1.6.12** (deployed 2026-11-20, commit `1b70d8f`) — upstream `czg86389-hub/muse2api` |
 | Dashboard languages | 中文 / English / **ខ្មែរ** (switcher in the header) |
+| Creator page | `/studio` — Muse Studio (EN/KM/ZH, async task UX) |
 
 Because it binds to loopback, **no ufw or nginx change is required**. Cloudflare
 Tunnel connects from the same host to `localhost:6391`.
@@ -60,6 +61,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://127.0.0.1:6391/v1/models   # 401
 ## 3. Use it
 
 - Admin: `https://muse2api.crdubber-api.world/admin?key=<MUSE2API_KEY>`
+- Studio: `https://muse2api.crdubber-api.world/studio`
 - API base: `https://muse2api.crdubber-api.world/v1`
 - The key lives in `/etc/muse2api.env` (`MUSE2API_KEY`).
 
