@@ -2107,6 +2107,7 @@ def admin_status(_=Depends(auth)):
     return {
         "accounts": store.list_accounts(),
         "stats": store.stats(),
+        "version": _read_local_version().get("version", ""),
         "generation_queue": QUEUE_POLICY.settings(),
         "tasks": store.list_tasks(20),
         "media_count": len(os.listdir(CFG.media_dir))
@@ -2622,27 +2623,43 @@ def delete_single_media(name: str, _=Depends(auth)):
 
 
 # ------------------------- 前端页面 -------------------------
-def _admin_html() -> str:
-    p = os.path.join(BASE_DIR, "admin.html")
+_NO_STORE = {"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"}
+
+
+def _page_html(filename: str, missing: str) -> str:
+    p = os.path.join(BASE_DIR, filename)
     try:
         with open(p, encoding="utf-8") as f:
             return f.read()
     except OSError:
         return ("<!doctype html><meta charset=utf-8><body style='background:#0b0f19;"
                 "color:#e6e8ee;font-family:system-ui;padding:40px'>"
-                "<h2>muse2api</h2><p>管理页面文件 admin.html 缺失。</p>"
+                f"<h2>muse2api</h2><p>{missing}</p>"
                 "<p>接口可用：<code>/v1/images/generations</code>、"
                 "<code>/v1/videos</code></p></body>")
 
 
+def _admin_html() -> str:
+    return _page_html("admin.html", "管理页面文件 admin.html 缺失。")
+
+
+def _studio_html() -> str:
+    return _page_html("studio.html", "Studio 页面文件 studio.html 缺失。")
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return HTMLResponse(_admin_html(), headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"})
+    return HTMLResponse(_admin_html(), headers=_NO_STORE)
 
 
 @app.get("/admin", response_class=HTMLResponse)
 def admin_page():
-    return HTMLResponse(_admin_html(), headers={"Cache-Control": "no-store, no-cache, must-revalidate", "Pragma": "no-cache"})
+    return HTMLResponse(_admin_html(), headers=_NO_STORE)
+
+
+@app.get("/studio", response_class=HTMLResponse)
+def studio_page():
+    return HTMLResponse(_studio_html(), headers=_NO_STORE)
 
 
 
@@ -2891,7 +2908,7 @@ MANAGED_DEPLOYMENT = os.environ.get("MUSE2API_MANAGED_DEPLOYMENT", "0") == "1"
 TRACKED_REPO_PATHS = [
     "app.py", "engine.py", "store.py", "cdp.py", "config.py", "proxy.py",
     "generation_timing.py", "thumbnails.py", "GENERATION_QUEUE.md", "VERSION_REPORTING.md",
-    "admin.html", "README.md", "version.json", "requirements.txt",
+    "admin.html", "studio.html", "README.md", "version.json", "requirements.txt",
     "Dockerfile", "docker-compose.yml", ".env.example", ".gitignore",
     "LICENSE", "extension", "deploy", "tools",
 ]

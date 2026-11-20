@@ -12,6 +12,12 @@ from types import SimpleNamespace
 
 ROOT = Path(__file__).resolve().parents[1]
 
+# Windows consoles default to a legacy codepage; the fixture prints Chinese text.
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except (AttributeError, OSError):
+    pass
+
 
 def load_waiter(path):
     tree = ast.parse(Path(path).read_text(encoding="utf-8"))
