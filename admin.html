@@ -177,8 +177,19 @@
   .badge.mute{color:var(--muted);border-color:var(--line);background:var(--bg2)}
   .badge.info{color:var(--accent);border-color:rgba(79,140,255,.35);background:rgba(79,140,255,.1)}
   .acts{display:flex;gap:6px;flex-wrap:wrap}
-  .quota-cell{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
-  .quota-cell .quota-extra{font-family:ui-monospace,monospace;font-size:10.5px;color:var(--muted)}
+  .quota-cell{display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+  .quota-cell .badge{font-size:12px;padding:4px 10px}
+  /* 额外代币：独立紫色胶囊，和主额度徽章区分开，字号调大以便一眼看清 */
+  .quota-cell .quota-extra{
+    display:inline-flex;align-items:center;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    font-size:12px;font-weight:700;line-height:1;letter-spacing:.2px;
+    color:var(--purple);background:rgba(167,139,250,.16);
+    border:1px solid rgba(167,139,250,.45);border-radius:999px;
+    padding:4px 9px;cursor:help;transition:background .15s,border-color .15s
+  }
+  .quota-cell .quota-extra::before{content:'+';font-weight:800;margin-right:1px;opacity:.9}
+  .quota-cell .quota-extra:hover{background:rgba(167,139,250,.26);border-color:rgba(167,139,250,.72)}
   .acts-more{font-size:14px;line-height:1;padding:4px 9px}
   .acc-menu{position:fixed;z-index:70;display:flex;flex-direction:column;gap:4px;padding:6px;min-width:140px;
     background:var(--panel);border:1px solid var(--line2);border-radius:10px;box-shadow:0 12px 28px rgba(0,0,0,.45)}
@@ -384,7 +395,7 @@
           <button class="secondary" id="btnKeepaliveAll" onclick="keepaliveAll()" style="padding:6px 14px">⚡ 一键保活所有账号</button>
         </div>
       </div>
-      <div class="hint" data-i18n="keepalive-hint">系统已开启<b>后台每 30 分钟静默保活</b>与<b>多账号公平轮转（LRU）</b>；「测试」会真实打开 muse.ai 验证会话。</div>
+      <div class="hint" data-i18n="keepalive-hint">系统已开启<b>后台每 30 分钟静默保活</b>与<b>多账号公平轮转（LRU）</b>；「测试」会真实打开 muse.ai 验证会话。额度列中<b style="color:var(--purple)">紫色 +N</b> 表示剩余额外代币，主徽章的绿/黄/红分别对应周用量低于 50%、低于 80%、80% 及以上。</div>
       <div class="tblwrap scrolly" id="poolTableWrap"><table id="poolTable">
         <thead><tr>
           <th>标签</th><th>账号 ID</th><th>状态</th><th>有效期</th><th>额度</th><th data-i18n="col-enabled">启用</th><th>Cookie</th>
@@ -1321,7 +1332,7 @@ const I18N_EN_HTML = {
   "auth-banner": "\n      <b>Enter your API Key first so the page can load data</b><br>\n      <span style=\"color:var(--muted)\">\n        The API Key is this service's own \"access password\". It stops other people from using your Muse account quota.\n        It is <b style=\"color:var(--text)\">not</b> your Muse password. It is a random string generated at deploy time (it starts with <code>m2a_</code>).<br>\n        Paste it into the box at the top right and click \"Save\". Your browser remembers it, so you won't need to enter it again.\n      </span>\n    ",
   "model-names-hint": "\n        Model names: <code>muse-spark</code> (chat/code), <code>muse-image</code> (images), <code>muse-video</code> (videos).\n        See the \"Integration Docs\" tab for full examples.\n      ",
   "add-account-hint": "\n        Copy the <b>muse.ai</b> cookie string from your browser and paste it here. Required cookies:\n        <code>hatch_sess</code>. <code>hatch_vml</code> is an optional workspace token and does not block import.\n        For batch import, put one account per line in the format <code>label | cookie string</code> (label is optional).\n      ",
-  "keepalive-hint": "The system runs <b>a silent background keep-alive every 30 minutes</b> and <b>fair multi-account rotation (LRU)</b>. \"Test\" actually opens muse.ai to verify the session.",
+  "keepalive-hint": "The system runs <b>a silent background keep-alive every 30 minutes</b> and <b>fair multi-account rotation (LRU)</b>. \"Test\" actually opens muse.ai to verify the session. In the Quota column, a <b style=\"color:var(--purple)\">purple +N</b> chip is the extra tokens left, while the badge colour tracks weekly usage (green &lt;50%, amber &lt;80%, red ≥80%).",
   "ext-why-hint": "\n        A small browser extension syncs <b>the muse.ai login you already have on your own computer</b>.\n        No Python, no terminal, no commands.<br>\n        <b>Why an extension is required</b>: muse.ai's login session cookie is marked\n        <code>httpOnly</code>, so page scripts (typing <code>document.cookie</code> in F12,\n        bookmarklets) can't read them. Only a browser extension's <code>cookies</code> API can.\n      ",
   "ext-unzip-hint": "\n            Unzip it to a folder you won't delete, e.g. <code>D:\\muse2api-extension</code>.\n          ",
   "ext-load-steps": "\n            <li>Type <code>chrome://extensions</code> in the address bar and press Enter</li>\n            <li>Turn on the <b>Developer mode</b> switch at the top right</li>\n            <li>Click <b>Load unpacked</b> at the top left</li>\n            <li>Select the <b>folder</b> you unzipped in step 1 (not a single file inside it)</li>\n          ",
@@ -1659,7 +1670,7 @@ const I18N_KM = {
 const I18N_KM_HTML = {
   "auth-banner": "\n      <b>បំពេញ API Key ជាមុន ដើម្បីឱ្យទំព័រផ្ទុកទិន្នន័យបាន</b><br>\n      <span style=\"color:var(--muted)\">\n        API Key គឺជា \"ពាក្យសម្ងាត់ចូលប្រើ\" របស់សេវានេះ។ វាការពារមិនឱ្យអ្នកផ្សេងប្រើកូតាគណនី Muse របស់អ្នក។\n        វា <b style=\"color:var(--text)\">មិនមែន</b> ពាក្យសម្ងាត់ Muse របស់អ្នកទេ។ វាជាខ្សែអក្សរចៃដន្យដែលបង្កើតពេលដាក់ឱ្យដំណើរការ (ចាប់ផ្ដើមដោយ <code>m2a_</code>)។<br>\n        បិទភ្ជាប់វាក្នុងប្រអប់ខាងស្ដាំខាងលើ ហើយចុច \"រក្សាទុក\"។ កម្មវិធីរុករករបស់អ្នកនឹងចងចាំវា ដូច្នេះអ្នកមិនចាំបាច់បញ្ចូលម្ដងទៀតទេ។\n      </span>\n    ",
   "add-account-hint": "\n        ចម្លងខ្សែអក្សរ cookie របស់ <b>muse.ai</b> ពីកម្មវិធីរុករករបស់អ្នក ហើយបិទភ្ជាប់ទីនេះ។ Cookie ដែលត្រូវការ:\n        <code>hatch_sess</code>។ <code>hatch_vml</code> ជា token workspace ស្រេចចិត្ត ហើយមិនរារាំងការនាំចូលទេ។\n        សម្រាប់ការនាំចូលជាក្រុម ដាក់មួយគណនីក្នុងមួយបន្ទាត់ ក្នុងទម្រង់ <code>label | cookie string</code> (label ស្រេចចិត្ត)។\n      ",
-  "keepalive-hint": "ប្រព័ន្ធដំណើរការ <b>ការរក្សាជីវិតស្ងាត់រៀងរាល់ 30 នាទី</b> និង <b>ការបង្វិលគណនីច្រើនដោយយុត្តិធម៌ (LRU)</b>។ \"សាកល្បង\" បើក muse.ai ពិតដើម្បីផ្ទៀងផ្ទាត់សម័យ។",
+  "keepalive-hint": "ប្រព័ន្ធដំណើរការ <b>ការរក្សាជីវិតស្ងាត់រៀងរាល់ 30 នាទី</b> និង <b>ការបង្វិលគណនីច្រើនដោយយុត្តិធម៌ (LRU)</b>។ \"សាកល្បង\" បើក muse.ai ពិតដើម្បីផ្ទៀងផ្ទាត់សម័យ។ ក្នុងជួរកូតា <b style=\"color:var(--purple)\">+N ពណ៌ស្វាយ</b> គឺជាថូខឹនបន្ថែមដែលនៅសល់ ហើយពណ៌របស់ស្លាកសំគាល់ការប្រើប្រាស់ប្រចាំសប្តាហ៍ (បៃតង &lt;50%, លឿង &lt;80%, ក្រហម ≥80%)។",
   "model-names-hint": "\n        ឈ្មោះម៉ូដែល: <code>muse-spark</code> (សន្ទនា/កូដ), <code>muse-image</code> (រូបភាព), <code>muse-video</code> (វីដេអូ)។\n        មើលឧទាហរណ៍ពេញលេញក្នុងផ្ទាំង \"ឯកសារភ្ជាប់\"។\n      ",
   "extension-upgrade-notice": "\n      <b>សំខាន់៖ សូមដំឡើងផ្នែកបន្ថែមកម្មវិធីរុករកដោយដៃ ទៅកំណែ 1.0.3</b><br>\n      ការធ្វើបច្ចុប្បន្នភាពសេវា មិនធ្វើបច្ចុប្បន្នភាពផ្នែកបន្ថែមដែលបានផ្ទុករួចនោះទេ។ សូមទាញយកកញ្ចប់ថ្មី ជំនួសឯកសារក្នុងថតផ្នែកបន្ថែមដើម រួចចុច «ផ្ទុកឡើងវិញ» នៅ <code>chrome://extensions</code> ឬ <code>edge://extensions</code>។ ត្រូវធ្វើដោយឡែកសម្រាប់ប្រវត្តិកម្មវិធីរុករកនីមួយៗ។<br>\n      <a href=\"/admin/extension\">ទាញយកផ្នែកបន្ថែម 1.0.3</a>; អ្នកប្រើ Tampermonkey សូមដំឡើង script ទៅ 1.1.2។\n    ",
   "vml-role": "Token workspace ស្រេចចិត្ត; <b>មិនចាំបាច់សម្រាប់ការនាំចូល</b>",
@@ -2178,8 +2189,9 @@ function quotaBadge(a){
   if (q.checked_at) title += `\n查询时间：${fmtTime(q.checked_at)}`;
   if (q.checked_at && Date.now()/1000 - q.checked_at > 3600) title += '\n额度数据已超过 1 小时，需重新查询';
   const main = pct != null ? `${plan} · ${pct}%` : plan;
-  const extraLeft = q.extra_left ? String(q.extra_left).replace(/\s*tokens?\s+left\s*$/i, '') : '';
-  const extra = extraLeft ? `<span class="quota-extra" title="${esc(title)}">+${esc(extraLeft)}</span>` : '';
+  const extraLeft = q.extra_left ? String(q.extra_left).replace(/^\+\s*/, '').replace(/\s*tokens?\s+left\s*$/i, '') : '';
+  const extraTitle = `额外代币：剩 ${extraLeft}${q.extra_used_pct != null ? `（已用 ${q.extra_used_pct}%）` : ''}`;
+  const extra = extraLeft ? `<span class="quota-extra" title="${esc(extraTitle)}">${esc(extraLeft)}</span>` : '';
   return `<span class="quota-cell"><span class="badge ${cls}" title="${esc(title)}">${esc(main)}</span>${extra}</span>`;
 }
 
