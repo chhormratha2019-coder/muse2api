@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%234f8cff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a78bfa%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%229%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M16%207l2.2%206.8L25%2016l-6.8%202.2L16%2025l-2.2-6.8L7%2016l6.8-2.2z%22%20fill%3D%22%23fff%22%2F%3E%3C%2Fsvg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2032%2032%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20stop-color%3D%22%234f8cff%22%2F%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23a78bfa%22%2F%3E%3C%2FlinearGradient%3E%3C%2Fdefs%3E%3Crect%20width%3D%2232%22%20height%3D%2232%22%20rx%3D%228%22%20fill%3D%22url(%23g)%22%2F%3E%3Cpath%20d%3D%22M7.5%2024V9h4.2l4.3%207.6L20.3%209h4.2v15%22%20fill%3D%22none%22%20stroke%3D%22%23fff%22%20stroke-width%3D%224.4%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E">
 <meta name="theme-color" content="#0a0e17">
 <title>muse2api · 账号池控制台</title>
 <style>
@@ -56,7 +56,9 @@
   }
   .hwrap{width:100%;max-width:none;margin:0;padding:14px clamp(12px,1.2vw,24px);display:flex;align-items:center;gap:16px;flex-wrap:wrap}
   .logo{min-width:0;max-width:100%;flex-wrap:wrap;display:flex;align-items:center;gap:10px;font-weight:650;font-size:17px;letter-spacing:.2px}
-  .logo .dot{width:10px;height:10px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--purple));box-shadow:0 0 14px rgba(79,140,255,.8)}
+  .logo .mark{width:22px;height:22px;flex:0 0 22px;border-radius:7px;display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent),var(--purple));box-shadow:0 4px 14px -5px rgba(79,140,255,.75)}
+  .logo .mark svg{width:15px;height:15px;display:block}
   .logo small{color:var(--muted);font-weight:400;font-size:12px;margin-left:2px}
   .pills{min-width:0;max-width:100%;display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center}
   .pill{
@@ -287,7 +289,7 @@
 <header>
   <div class="hwrap">
     <div class="logo">
-      <span class="dot"></span>muse2api <small>Muse 网页额度 · 反代 API</small>
+      <span class="mark"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M7.5 24V9h4.2l4.3 7.6L20.3 9h4.2v15" fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>muse2api <small>Muse 网页额度 · 反代 API</small>
       <a href="https://github.com/czg86389-hub/muse2api" target="_blank" id="repoHomeLink" class="pill" style="margin-left:10px;text-decoration:none;color:var(--text);border-color:var(--line2);cursor:pointer" title="打开 GitHub 开源仓库 (https://github.com/czg86389-hub/muse2api)">
         <svg viewBox="0 0 16 16" width="14" height="14" fill="currentColor" style="vertical-align:-2px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
         <b>GitHub 仓库</b>
