@@ -3,16 +3,19 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import tempfile
 import threading
 import time
 import uuid
 
+from proxy import public_proxy
+
 _LOCK = threading.Lock()
 
-# 决定账号生死的核心 cookie（与 engine.ESSENTIAL_COOKIES 保持一致）
-ESSENTIAL_COOKIES = ("hatch_sess", "hatch_gw", "hatch_vml",
-                     "hatch_native_auth_device")
+# 登录会话存在性检查；可用性仍须经上游认证（与 engine 一致）
+# hatch_vml 是可选工作区令牌，缺失不能据此拒绝会话导入
+ESSENTIAL_COOKIES = ("hatch_sess",)
 
 
 def _is_pos(v) -> bool:
@@ -94,6 +97,29 @@ def _write(path: str, obj):
             os.unlink(tmp)
 
 
+def _quota_exhausted(account: dict) -> bool:
+    """额度读得到且周额度用尽、附赠额度也归零时，视为暂时不可用（排在最后）。"""
+    quota = account.get("quota") or {}
+    if not quota.get("found"):
+        return False
+    try:
+        weekly = float(quota.get("weekly_used_pct") or 0)
+    except (TypeError, ValueError):
+        weekly = 0.0
+    if weekly < 100:
+        return False
+    left = str(quota.get("extra_left") or "").strip().lower()
+    if not left:
+        return True
+    match = re.match(r"(\d+(?:\.\d+)?)", left)
+    if match:
+        try:
+            return float(match.group(1)) <= 0
+        except ValueError:
+            return False
+    return left in ("none", "no", "0", "empty")
+
+
 class Store:
     def __init__(self, cfg):
         self.cfg = cfg
@@ -103,8 +129,36 @@ class Store:
             if _is_pos(ce.get("hatch_vml")):
                 a["expires_at"] = int(ce["hatch_vml"])
         self.tasks: dict[str, dict] = _read(cfg.tasks_file, {})
+        self._last_persist: dict[str, float] = {}
+
+    # ---------- 落盘 ----------
+    def flush(self):
+        """把内存状态强制写回磁盘（退出前调用，避免节流窗口内的数据丢失）。"""
+        with _LOCK:
+            _write(self.cfg.accounts_file, self.accounts)
+            _write(self.cfg.tasks_file, self.tasks)
+
+    def _persist_use(self, account: dict, min_interval: float = 30.0):
+        """高频的 last_used/use_count 更新按账号节流落盘，避免每个请求都整表重写。"""
+        now = time.time()
+        if now - self._last_persist.get(account["id"], 0.0) >= min_interval:
+            self._last_persist[account["id"]] = now
+            _write(self.cfg.accounts_file, self.accounts)
 
     # ---------- 账号 ----------
+    def find_duplicate(self, cookies: dict) -> dict | None:
+        """按核心 cookie 判断是否已有同一账号（忽略非核心 cookie 的噪声差异）。"""
+        target = {k: v for k, v in (cookies or {}).items()
+                  if k in ESSENTIAL_COOKIES and v}
+        if not target:
+            return None
+        with _LOCK:
+            for account in self.accounts:
+                existing = account.get("cookies") or {}
+                if all(existing.get(k) == v for k, v in target.items()):
+                    return account
+        return None
+
     def add_account(self, cookies: dict, label: str = "",
                     cookies_exp: dict | None = None) -> dict:
         with _LOCK:
@@ -122,10 +176,17 @@ class Store:
             _write(self.cfg.accounts_file, self.accounts)
             return acc
 
+    @staticmethod
+    def public_account(account: dict) -> dict:
+        item = {k: v for k, v in account.items() if k not in ("cookies", "proxy")}
+        item["proxy"] = public_proxy(account.get("proxy"))
+        item["cookie_count"] = len(account.get("cookies", {}))
+        return item
+
     def list_accounts(self) -> list[dict]:
         out = []
         for a in self.accounts:
-            item = {k: v for k, v in a.items() if k != "cookies"}
+            item = self.public_account(a)
             ce = a.get("cookies_exp") or {}
             if _is_pos(ce.get("hatch_vml")):
                 item["expires_at"] = int(ce["hatch_vml"])
@@ -146,7 +207,8 @@ class Store:
 
     def pick_account(self, preferred_id: str | None = None, rotate: bool = True,
                      force_rotate: bool = False, exclude_id: str | None = None,
-                     exclude_ids: set[str] | list[str] | None = None) -> dict | None:
+                     exclude_ids: set[str] | list[str] | None = None,
+                     record_use: bool = True) -> dict | None:
         """选择可用账号：优先复用当前已预热的健康账号（减少切号重连耗时），每满 15 次或遇错自动轮转。
         exclude_ids: 需要排除的账号 ID 集合（例如正在被其他并发线程占用的账号）。"""
         with _LOCK:
@@ -165,26 +227,29 @@ class Store:
                     return None
                 elif len(live) > 1:
                     live = [a for a in live if a["id"] != exclude_id] or live
-            if preferred_id and not force_rotate:
+            if preferred_id and not rotate and not force_rotate:
                 for a in live:
                     if a["id"] == preferred_id and a.get("ok") is not False:
-                        sticky_n = getattr(self, "_sticky_count", 0) if getattr(self, "_sticky_id", None) == preferred_id else 0
-                        if not rotate or sticky_n < 15:
-                            self._sticky_id = preferred_id
-                            self._sticky_count = sticky_n + 1
+                        self._sticky_id = preferred_id
+                        self._sticky_count = 1
+                        if record_use:
                             a["last_used"] = time.time()
                             a["use_count"] = a.get("use_count", 0) + 1
-                            _write(self.cfg.accounts_file, self.accounts)
-                            return a
+                            self._persist_use(a)
+                        return a
             healthy = [a for a in live if a.get("ok") is not False]
             candidates = healthy if healthy else live
-            candidates.sort(key=lambda a: (a.get("last_used") or 0.0, a.get("use_count") or 0))
+            # 额度用尽的账号排到最后，其余按最久未用（LRU）轮转。
+            candidates.sort(key=lambda a: (_quota_exhausted(a),
+                                           a.get("last_used") or 0.0,
+                                           a.get("use_count") or 0))
             acc = candidates[0]
             self._sticky_id = acc["id"]
             self._sticky_count = 1
-            acc["last_used"] = time.time()
-            acc["use_count"] = acc.get("use_count", 0) + 1
-            _write(self.cfg.accounts_file, self.accounts)
+            if record_use:
+                acc["last_used"] = time.time()
+                acc["use_count"] = acc.get("use_count", 0) + 1
+                self._persist_use(acc)
             return acc
 
     def touch_keepalive(self, aid: str, ok: bool | None = True, note: str = ""):
@@ -233,7 +298,7 @@ class Store:
             for a in self.accounts:
                 if a["id"] == aid:
                     for k, v in kw.items():
-                        if v is not None:
+                        if v is not None or k == "ok":
                             a[k] = v
                     if "cookies_exp" in kw and kw["cookies_exp"] is not None:
                         ce = a["cookies_exp"]
@@ -312,3 +377,21 @@ class Store:
             self.tasks = {k: v for k, v in self.tasks.items() if k in keep_ids}
             _write(self.cfg.tasks_file, self.tasks)
             return max(0, removed)
+
+    def prune_tasks(self, keep: int) -> int:
+        """保留最近 keep 个已结束任务；排队/进行中的任务永不丢弃。"""
+        if keep < 0:
+            return 0
+        with _LOCK:
+            active = [t for t in self.tasks.values()
+                      if t.get("status") in ("queued", "processing")]
+            active_ids = {t["id"] for t in active}
+            finished = sorted((t for t in self.tasks.values() if t["id"] not in active_ids),
+                              key=lambda t: t.get("created_at") or 0, reverse=True)
+            keep_ids = active_ids | {t["id"] for t in finished[:keep]}
+            if len(keep_ids) >= len(self.tasks):
+                return 0
+            removed = len(self.tasks) - len(keep_ids)
+            self.tasks = {k: v for k, v in self.tasks.items() if k in keep_ids}
+            _write(self.cfg.tasks_file, self.tasks)
+            return removed

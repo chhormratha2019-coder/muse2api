@@ -84,13 +84,17 @@ async def check(source, home):
     module = importlib.util.module_from_spec(spec)
     sys.modules[spec.name] = module
     spec.loader.exec_module(module)
+    module.store.add_account({"hatch_sess": "scheduler-fixture"}, "scheduler-fixture")
     calls = []
     release = threading.Event()
     media = Path(module.CFG.media_dir) / "fixture.png"
     media.write_bytes(b"image fixture bytes")
 
     def generation(prompt, kind, timeout, **kwargs):
-        calls.append((prompt, kind, timeout, kwargs.get("reference_image")))
+        references = kwargs.get("reference_images")
+        if references is None and kwargs.get("reference_image"):
+            references = [kwargs["reference_image"]]
+        calls.append((prompt, kind, timeout, references or []))
         assert release.wait(2), "test worker not released"
         if "FAIL_FIXTURE" in prompt:
             raise module.MuseGenerationError("fixture generation failed")
@@ -101,7 +105,8 @@ async def check(source, home):
     if locked_impl:
         def assert_owned(*args, **kwargs):
             assert module.GEN_LOCK.locked(), "browser lock must cover retry/cleanup"
-            assert kwargs.get("deadline") is not None
+            assert kwargs.get("deadline") is None, "generation budget starts after account admission"
+            assert kwargs.get("queue_timeout") == module.QUEUE_POLICY.settings()["queue_timeout"]
             return {"fixture": True}, None
         module._run_generation_locked = assert_owned
         module._run_generation("lock fixture", "image", 1)
@@ -110,7 +115,7 @@ async def check(source, home):
         real_lock = module.GEN_LOCK
         class BusyLock:
             def acquire(self, timeout):
-                assert timeout == 1
+                assert timeout == module.QUEUE_POLICY.settings()["queue_timeout"]
                 return False
         module.GEN_LOCK = BusyLock()
         try:
@@ -161,13 +166,70 @@ async def check(source, home):
         done = await finish(response.json()["task_id"])
         assert done["status"] == "completed"
         assert done["data"][0]["url"].endswith("fixture.png")
-        assert calls[-1][3] == "data:image/png;base64," + base64.b64encode(b"fixture reference").decode()
+        assert calls[-1][3] == ["data:image/png;base64," + base64.b64encode(b"fixture reference").decode()]
         response = await client.post("/v1/images/edits", json={
             "prompt": "edit JSON reference", "async": True, "reference_image": "data:image/png;base64,eA=="})
         assert response.status_code == 202
         assert (await finish(response.json()["task_id"]))["status"] == "completed"
-        assert calls[-1][3] == "data:image/png;base64,eA=="
+        assert calls[-1][3] == ["data:image/png;base64,eA=="]
+        response = await client.post("/v1/images/edits", json={
+            "prompt": "edit two references", "async": True,
+            "images": [
+                {"url": "data:image/png;base64,Zmlyc3Q="},
+                {"image_url": "data:image/png;base64,c2Vjb25k"},
+            ]})
+        assert response.status_code == 202
+        assert (await finish(response.json()["task_id"]))["status"] == "completed"
+        assert calls[-1][3] == [
+            "data:image/png;base64,Zmlyc3Q=", "data:image/png;base64,c2Vjb25k"]
+        response = await client.post("/v1/images/generations", json={
+            "prompt": "generate from two references", "async": True,
+            "images": ["data:image/png;base64,Zmlyc3Q=", "data:image/png;base64,c2Vjb25k"]})
+        assert response.status_code == 202
+        assert (await finish(response.json()["task_id"]))["status"] == "completed"
+        assert calls[-1][3] == [
+            "data:image/png;base64,Zmlyc3Q=", "data:image/png;base64,c2Vjb25k"]
         print("multipart_and_json_reference_forwarding=PASS")
+
+        response = await client.post("/v1/videos", json={
+            "prompt": "animate two references", "duration": 6,
+            "images": ["data:image/png;base64,c3RhcnQ=", "data:image/png;base64,c3R5bGU="]})
+        assert response.status_code == 200
+        video_id = response.json()["task_id"]
+        for _ in range(100):
+            video = await client.get("/v1/videos/" + video_id)
+            assert video.status_code == 200
+            if video.json()["status"] in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.01)
+        assert video.json()["status"] == "completed"
+        assert calls[-1][1] == "video"
+        assert calls[-1][3] == [
+            "data:image/png;base64,c3RhcnQ=", "data:image/png;base64,c3R5bGU="]
+        assert "2 张参考图片" in calls[-1][0]
+        print("multi_reference_video_forwarding=PASS")
+
+        for bad in [
+            {"prompt": "bad empty reference", "images": [None]},
+            {"prompt": "too many references",
+             "images": ["data:image/png;base64,eA=="] * (module.MAX_REFERENCE_IMAGES + 1)},
+            {"prompt": "conflicting references", "reference_image": "data:image/png;base64,eA==",
+             "images": ["data:image/png;base64,eQ=="]},
+        ]:
+            response = await client.post("/v1/images/generations", json=bad)
+            assert response.status_code == 400, (bad, response.status_code, response.body)
+        video_bad = await client.post("/v1/videos", json={
+            "prompt": "conflicting video references", "image": "data:image/png;base64,eA==",
+            "images": ["data:image/png;base64,eQ=="]})
+        assert video_bad.status_code == 400
+        for bad in [
+            {"prompt": "bad edit array", "images": [None]},
+            {"prompt": "bad edit conflict", "image": "data:image/png;base64,eA==",
+             "images": ["data:image/png;base64,eQ=="]},
+        ]:
+            response = await client.post("/v1/images/edits", json=bad)
+            assert response.status_code == 400, (bad, response.status_code, response.body)
+        print("multi_reference_validation=PASS")
 
         body = {"prompt": "dedicated async request", "reference_image": "data:image/png;base64,eA=="}
         response = await client.post("/v1/images/tasks", json=body, headers={"Idempotency-Key": "fixture-key"})

@@ -1,9 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "Muse2API - Kết nối Muse.ai",
-  "version": "1.0.0",
-  "description": "Chuyển Cookie đăng nhập muse.ai vào dịch vụ Muse2API của bạn.",
-  "permissions": ["cookies", "storage", "activeTab"],
+  "name": "__MSG_extName__",
+  "version": "1.0.3",
+  "description": "__MSG_extDesc__",
+  "default_locale": "zh_CN",
+  "permissions": [
+    "cookies",
+    "storage",
+    "activeTab"
+  ],
   "host_permissions": [
     "https://muse.ai/*",
     "https://*.muse.ai/*",
@@ -11,7 +16,7 @@
     "https://*/*"
   ],
   "action": {
-    "default_title": "Kết nối Muse2API",
+    "default_title": "__MSG_extName__",
     "default_popup": "popup.html"
   }
 }

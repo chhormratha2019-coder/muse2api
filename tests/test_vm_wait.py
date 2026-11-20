@@ -2,7 +2,9 @@ import sys,importlib.util,json
 from types import SimpleNamespace
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
-spec=importlib.util.spec_from_file_location('candidate',sys.argv[1]);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+DEFAULT_ENGINE=str(Path(__file__).resolve().parents[1]/'engine.py')
+TARGET=next((a for a in sys.argv[1:] if not a.startswith('--')),DEFAULT_ENGINE)
+spec=importlib.util.spec_from_file_location('candidate',TARGET);m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 clock=[0.0]
 m.time=SimpleNamespace(time=lambda:clock[0],sleep=lambda s:clock.__setitem__(0,clock[0]+s))
 engine=object.__new__(m.MuseEngine)

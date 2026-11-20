@@ -1,10 +1,15 @@
 {
-  "version": "1.6.0",
-  "updated_at": "2026-10-11",
+  "version": "1.6.12",
+  "updated_at": "2026-11-19",
   "repo": "https://github.com/czg86389-hub/muse2api",
   "highlights": [
-    "支持多账号真并行并发执行（基于 Chromium 独立 BrowserContext 隐身容器隔离，多账号间 Cookie / Session 零污染互不干扰）",
-    "引入智能账号池调度器与并发锁（支持通过 MUSE2API_CONCURRENCY 配置并发槽位上限，同账号互斥防踩踏，多账号自动并行调度）",
-    "合并社区 PR #18：精确区分视频与封面静帧匹配逻辑，彻底杜绝视频误返回静止图片问题"
+    "修复 #62：muse.ai 从 2026-11-19 起聊天里只显示约 498px 的缩略图，生成的图片因此变小。现在图片任务会打开 muse.ai 的图片查看器取原图（实测 1344x1792），取不到时仍返回缩略图并在日志里提示。",
+    "只影响图片任务；视频、对话与参考素材上传不变。无需升级浏览器插件。",
+    "扩展 1.0.3：修复多浏览器资料下的 Cookie 导入；升级后如仍显示旧版本，请手动重新加载扩展。"
+  ],
+  "highlights_en": [
+    "Fix #62: since 2026-11-19 muse.ai shows only a ~498px thumbnail in the chat, so generated images came back small. Image tasks now open muse.ai's image viewer and return the full-size picture (measured 1344x1792); if it cannot be opened the thumbnail is still returned and a warning is logged.",
+    "Images only; video, chat and reference uploads are unchanged. No extension upgrade is needed.",
+    "Extension 1.0.3: fixes cookie import across every browser profile; reload the extension manually if the old version is still shown."
   ]
 }

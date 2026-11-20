@@ -1,0 +1,47 @@
+[Unit]
+Description=Muse2API bridge (isolated instance)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=muse2api
+Group=muse2api
+WorkingDirectory=/opt/muse2api
+EnvironmentFile=/etc/muse2api.env
+Environment=HOME=/opt/muse2api/home
+ExecStart=/opt/muse2api/venv/bin/python -m uvicorn app:app --host 127.0.0.1 --port 6391
+Restart=always
+RestartSec=3
+StandardOutput=journal
+StandardError=journal
+
+# Sandboxing (keeps this app from touching other projects)
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+ProtectHostname=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX AF_NETLINK
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+AmbientCapabilities=
+UMask=0027
+ReadWritePaths=/opt/muse2api/data /opt/muse2api/home /var/log/muse2api
+
+# Resource guard so Chromium cannot starve the other projects
+MemoryMax=4G
+CPUQuota=200%
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

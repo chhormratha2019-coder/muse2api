@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Byte-compile sources
+        run: python -m compileall -q app.py engine.py store.py config.py cdp.py proxy.py generation_timing.py thumbnails.py
+      - name: JavaScript tests
+        run: |
+          node tests/test_admin_api_error_messages.mjs
+          node tests/test_extension_cookie_store.mjs
+      - name: Offline Python tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          for t in \
+            test_account_proxy \
+            test_account_proxy_routing \
+            test_admin_base_url \
+            test_async_images \
+            test_concurrency \
+            test_cookie_requirements \
+            test_extension_upgrade_notice \
+            test_extension_zip \
+            test_generation_queue \
+            test_keepalive_scheduling \
+            test_media_delete \
+            test_proxy_status_receipt \
+            test_proxy_url_import \
+            test_quota_account_binding \
+            test_quota_localization \
+            test_reference_limits \
+            test_reference_media \
+            test_reference_media_hardening \
+            test_refusal_rotation \
+            test_ref_image_safety \
+            test_release_integration \
+            test_session_cookie_rotation \
+            test_session_health \
+            test_session_only_import \
+            test_socks_proxy \
+            test_version_reporting \
+            test_video_late_attachment \
+            test_vm_wait \
+            test_wake_confirmation \
+            test_browser_context_downloads \
+            test_muse_video_delivery ; do
+            echo "== $t =="
+            python "tests/$t.py"
+          done
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ffmpeg
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - uses: browser-actions/setup-chrome@v1
+        with:
+          install-chromedriver: false
+      - name: Browser integration tests
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          for t in \
+            test_media_thumbnails \
+            test_admin_layout \
+            test_composer_send_browser \
+            test_full_image_viewer \
+            test_media_selection \
+            test_reference_upload_browser ; do
+            echo "== $t =="
+            python "tests/$t.py"
+          done
